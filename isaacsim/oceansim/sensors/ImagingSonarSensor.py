@@ -5,6 +5,11 @@ import numpy as np
 from omni.replicator.core.scripts.functional import write_np
 import warp as wp
 from isaacsim.oceansim.utils.ImagingSonar_kernels import *
+import rclpy 
+from rclpy.node import Node
+from sensor_msgs.msg import CompressedImage
+from cv_bridge import CvBridge
+import cv2
 
 
 # Future TODO
@@ -143,6 +148,13 @@ class ImagingSonarSensor(Camera):
         # Notice if you would like to observe sonar view from linked viewport.
         # Only horizontal fov is displayed correctly while the vertical fov is
         # followed by your viewport aspect ratio settings.
+
+        # ROS2 Initialization
+        rclpy.init()
+        self.ros_node = rclpy.create_node(f'{name}_ros_node')
+        self.image_publisher = self.ros_node.create_publisher(CompressedImage, '/image_png', 10)
+        self.bridge = CvBridge()
+        self.ros_node.get_logger().info(f"Sonar node '{name}' started and publishing to /image_png")
         
 
     # Initialize the sensor so that annotator is 
@@ -530,6 +542,26 @@ class ImagingSonarSensor(Camera):
                 self.sonar_image
             ]
         )
+
+        # Publish image to ROS
+        try:
+            image_np = self.sonar_image.numpy()
+            image_gray = cv2.cvtColor(image_np, cv2.COLOR_RGBA2GRAY)
+            
+            # Compress the image
+            _, compressed_data = cv2.imencode('.jpg', image_gray)
+
+            # Create the message
+            image_msg = CompressedImage()
+            image_msg.header.stamp = self.ros_node.get_clock().now().to_msg()
+            image_msg.format = "jpeg"
+            image_msg.data = compressed_data.tobytes()
+
+            self.image_publisher.publish(image_msg)
+            self.ros_node.get_logger().info("Publishing compressed sonar image")
+        except Exception as e:
+            self.ros_node.get_logger().error(f"Failed to publish compressed sonar image: {e}")
+
         return self.sonar_image
     
 
@@ -620,6 +652,12 @@ class ImagingSonarSensor(Camera):
 
         if self._viewport:
             self.ui_destroy()
+
+        # ROS2 cleanup
+        if self.ros_node is not None:
+            self.ros_node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
     def ui_destroy(self):

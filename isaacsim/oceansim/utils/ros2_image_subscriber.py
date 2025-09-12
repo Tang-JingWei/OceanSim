@@ -17,7 +17,7 @@ class ImageSubscriber(Node):
 
         self.subscription = self.create_subscription(
             CompressedImage,
-            '/oceansim/robot/uw_img',
+            '/oceansim/robot/uw_img/compressed',
             self.image_callback,
             qos)
             

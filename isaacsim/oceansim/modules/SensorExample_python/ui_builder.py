@@ -171,10 +171,13 @@ class UIBuilder():
                     folder_button_title="Select USD",
                     folder_dialog_title='Select the USD scene to test')
                 
+                _idx = 4 # default index of default_val, 0 is first index
+                _mode = ['No control', 'Straight line', 'Waypoints', 'Manual control', 'ROS control']
+                self._ctrl_mode = _mode[_idx]
                 self._ctrl_mode_model = dropdown_builder(
                     label='Control Mode',
-                    default_val=3,
-                    items=['No control', 'Straight line', 'Waypoints', 'Manual control', 'ROS control'],
+                    default_val=_idx,
+                    items=_mode,
                     tooltip='Select preferred control mode',
                     on_clicked_fn=self._on_ctrl_mode_dropdown_clicked
                 )
@@ -481,7 +484,7 @@ class UIBuilder():
                 self._ros2_control_mode_model = dropdown_builder(
                     label='ROS2 Control Mode',
                     default_val=0,
-                    items=['velocity control', 'force control'],
+                    items=['velocity control', 'force control', 'trans control'],
                     tooltip='Select preferred ROS2 control mode',
                     on_clicked_fn=self._on_ros2_control_mode_dropdown_clicked
                 )

@@ -8,7 +8,7 @@ from isaacsim.core.utils.prims import get_prim_path
 
 # ROS Control import
 try:
-    from isaacsim.oceansim.utils.ros2_control import ROS2ControlReceiver
+    from isaacsim.oceansim.utils.ros2_control import ROS2ControlReceiver, ROS2StatePublisher
     ROS2_CONTROL_AVAILABLE = True
     print("[Scenario] Simple ROS2 Control receiver found")
 except ImportError as e:
@@ -33,6 +33,7 @@ class MHL_Sensor_Example_Scenario():
         self._ros2_control_receiver = None
         self._enable_ros2_control = True
         self._ros2_control_mode = "velocity control"
+        self._ros_state_publisher = None
 
     def setup_scenario(self, rob, sonar, cam, DVL, baro, ctrl_mode):
         self._rob = rob
@@ -91,8 +92,18 @@ class MHL_Sensor_Example_Scenario():
 
             # initialize ROS2ControlReceiver
             self._setup_ros2_control()
+
+        self._setup_ros2_state_pub()
             
         self._running_scenario = True
+
+    def _setup_ros2_state_pub(self):
+        try:
+            self._ros_state_publisher = ROS2StatePublisher(self._rob, pub_frequency=1)
+
+        except Exception as e:
+            print(f"[Scenario] setup ros2 state publisher failed: {e}")
+            self._ros_state_publisher = None
 
     def _setup_ros2_control(self):
         """setup ROS2 control receiver"""
@@ -164,6 +175,10 @@ class MHL_Sensor_Example_Scenario():
         if self._ros2_control_receiver is not None:
             self._ros2_control_receiver.close()
 
+        # clear the ROS2 state publisher
+        if self._ros_state_publisher:
+            self._ros_state_publisher.close()
+
         self._rob = None
         self._sonar = None
         self._cam = None
@@ -208,8 +223,13 @@ class MHL_Sensor_Example_Scenario():
         elif self._ctrl_mode=="ROS control":
             if self._ros2_control_receiver is not None:
                 self._ros2_control_receiver.update_control()
+                
             else:
                 print("[Scenario] ROS2 Control receiver is not initialized, skipping update.")
+        
+        # always pub the state
+        if self._ros_state_publisher:
+            self._ros_state_publisher.publish_state()
 
 
 

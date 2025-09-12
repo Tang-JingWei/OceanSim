@@ -77,7 +77,7 @@ class UW_Camera(Camera):
                    writing_dir: str = None,
                    UW_yaml_path: str = None,
                    physics_sim_view=None,
-                   enable_ros2_pub=True, uw_img_topic="/oceansim/robot/uw_img", ros2_pub_frequency=5, ros2_pub_jpeg_quality=50):
+                   enable_ros2_pub=True, uw_img_topic="/oceansim/robot/uw_img/compressed", ros2_pub_frequency=1, ros2_pub_jpeg_quality=50):
         
         """Configure underwater rendering properties and initialize pipelines.
     
@@ -92,8 +92,8 @@ class UW_Camera(Camera):
             UW_yaml_path (str, optional): Path to YAML file with water properties. Defaults to None.
             physics_sim_view (_type_, optional): _description_. Defaults to None.          
             enable_ros2_pub (bool, optional): Enable ROS2 communication. Defaults to True.
-            uw_img_topic (str, optional): ROS2 topic name for UW image. Defaults to "/oceansim/robot/uw_img".
-            ros2_pub_frequency (int, optional): ROS2 publish frequency. Defaults to 5.
+            uw_img_topic (str, optional): ROS2 topic name for UW image.
+            ros2_pub_frequency (int, optional): ROS2 publish frequency.
             ros2_pub_jpeg_quality (int, optional): ROS2 publish jpeg quality. Defaults to 50.
     
         """
@@ -179,7 +179,7 @@ class UW_Camera(Camera):
 
             # fps control
             current_time = time.time()
-            if current_time - self._last_publish_time < (1.0 / self._frequency):
+            if current_time - self._last_publish_time < (1.0 / self._ros2_pub_frequency):
                 return
 
             # Convert the image
@@ -249,7 +249,9 @@ class UW_Camera(Camera):
                 self._writing_backend.schedule(write_image, path=f'UW_image_{self._id}.png', data=uw_image)
                 print(f'[{self._name}] [{self._id}] Rendered image saved to {self._writing_backend.output_dir}')
             if self._enable_ros2_pub:
-                self._ros2_publish_uw_img(uw_image)
+                # (width, height) = self.get_resolution()
+                uw_image_compressed = uw_image[::2, ::2] # 50%
+                self._ros2_publish_uw_img(uw_image_compressed)
                 pass
 
             self._id += 1
